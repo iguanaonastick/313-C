@@ -1,0 +1,59 @@
+#include <stdint.h>
+#include "utils.h"
+
+void convolve(const uint8_t input[LAYERS][HEIGHT][WIDTH],
+              const int8_t filter[3][3],
+              int32_t output[LAYERS][HEIGHT][WIDTH]) {
+
+    const int8_t filter00 = filter[0][0];
+    const int8_t filter01 = filter[0][1];
+    const int8_t filter02 = filter[0][2];
+    const int8_t filter10 = filter[1][0];
+    const int8_t filter11 = filter[1][1];
+    const int8_t filter12 = filter[1][2];
+    const int8_t filter20 = filter[2][0];
+    const int8_t filter21 = filter[2][1];
+    const int8_t filter22 = filter[2][2];
+
+    // Clear output
+    for (unsigned c = 0; c < LAYERS; c++) {
+        for (unsigned y = 0; y < HEIGHT; y++) {
+            for (unsigned x = 0; x < WIDTH; x++) {
+                output[c][y][x] = 0;
+            }
+        }
+    }
+
+    // Top left pixel
+    for (unsigned c = 0; c < LAYERS; c++) {
+        for (unsigned y = 0; y < HEIGHT; y++) {
+            for (unsigned x = 0; x < WIDTH; x++) {
+                output[c][y][x] += ((int32_t)input[c][y][x]) * filter11;
+                if (y != 0) {
+                    output[c][y][x] += ((int32_t)input[c][y - 1][x]) * filter01;
+                    if (y != HEIGHT - 1) {
+                        output[c][y][x] += ((int32_t)input[c][y + 1][x]) * filter21;
+                    }
+                }
+                if (x != 0) {
+                    output[c][y][x] += ((int32_t)input[c][y][x - 1]) * filter10;
+                    if (y != 0) {
+                        output[c][y][x] += ((int32_t)input[c][y - 1][x - 1]) * filter00;
+                    }
+                    if (x != WIDTH - 1) {
+                        output[c][y][x] += ((int32_t)input[c][y][x + 1]) * filter12;
+                    }
+                    if (y != HEIGHT - 1) {
+                        output[c][y][x] += ((int32_t)input[c][y + 1][x - 1]) * filter20;
+                    }
+                    if (x != WIDTH - 1) {
+                        output[c][y][x] += ((int32_t)input[c][y - 1][x + 1]) * filter02;
+                    }
+                }
+                if (x != WIDTH - 1 && y != HEIGHT - 1) {
+                    output[c][y][x] += ((int32_t)input[c][y + 1][x + 1]) * filter22;
+                }
+            }
+        }
+    }
+}
