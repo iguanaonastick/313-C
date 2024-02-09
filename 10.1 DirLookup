@@ -1,0 +1,57 @@
+#include <stdio.h>
+#include <stdint.h>
+#include <sys/types.h>
+#include <fcntl.h>
+
+#include "dirLookup.h"
+
+CS313ino_t dirLookup(const char *filename, const char *component) {
+    // Remove these two lines once you are using the parameters.
+    (void)filename;
+    (void)component;
+
+    // printf("This is the filename: %c" "\n", *filename);
+    // printf("This is the component: %c" "\n", *component);
+
+    FILE *filedesc = fopen(filename, "r");
+    if (!filedesc) {
+        return BAD_DIR_ENTRY_INODE_NUMBER;
+    }
+
+    struct dir_entry dirEnt;
+    int isEqual;
+    uint64_t i = 0;
+    CS313ino_t inode = BAD_DIR_ENTRY_INODE_NUMBER;
+
+    while (fread(&dirEnt.de_type, sizeof(dirEnt.de_type), 1, filedesc) > 0) {
+        i += sizeof(dirEnt.de_type);
+        if (fread(&dirEnt.de_namelen, sizeof(dirEnt.de_namelen), 1, filedesc)) {
+            i += sizeof(dirEnt.de_namelen);
+        }  // read de_type, de_namelen, de_reserved)
+        
+        if (fread(&dirEnt.de_reserved, sizeof(dirEnt.de_reserved), 1, filedesc)) {
+            i += sizeof(dirEnt.de_reserved);
+        }  // read de_type, de_namelen, de_reserved
+        
+        if (fread(&dirEnt.de_ino, sizeof(CS313ino_t), 1, filedesc)) {
+            i += sizeof(CS313ino_t);
+        }
+        
+        if (fread(&dirEnt.de_name, (size_t)dirEnt.de_namelen, 1, filedesc)) {
+            i += dirEnt.de_namelen;
+        }
+        
+        isEqual = strncmp(dirEnt.de_name, component, (size_t)dirEnt.de_namelen);
+        
+        if (isEqual == 0) {
+            inode = dirEnt.de_ino;
+        }
+        
+        if (i % 4 > 0) {
+            fseek(filedesc, 4 - (i % 4), SEEK_CUR);
+            i += (4 - (i % 4));
+        }
+    }
+
+    return inode;
+}
